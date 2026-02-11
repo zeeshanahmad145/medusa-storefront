@@ -5,13 +5,14 @@ import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 
 const Cart = () => {
-  const { cart, isLoading, updateLineItem, deleteLineItem } = useCart();
+  const { cart, isLoading, updateLineItem, deleteLineItem, refreshCart } = useCart();
   const navigate = useNavigate();
 
   const handleUpdateQuantity = async (lineId, newQuantity) => {
     if (newQuantity < 1) return;
     try {
       await updateLineItem(lineId, newQuantity);
+      await refreshCart();
     } catch (err) {
       toast.error("Failed to update quantity");
     }
@@ -21,6 +22,7 @@ const Cart = () => {
     try {
       await deleteLineItem(lineId);
       toast.success("Item removed from cart");
+      await refreshCart();
     } catch (err) {
       toast.error("Failed to remove item");
     }
@@ -56,7 +58,7 @@ const Cart = () => {
   }
 
   const subtotal = cart.items.reduce(
-    (sum, item) => sum + (item.unit_price * item.quantity),
+    (sum, item) => sum + item.unit_price * item.quantity,
     0
   );
   const shippingTotal = cart.shipping_total || 0;
