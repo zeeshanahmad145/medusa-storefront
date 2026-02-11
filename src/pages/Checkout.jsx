@@ -9,7 +9,9 @@ import medusa from "../lib/medusa";
 import { paymentInfoMap, isStripeLike, isManual } from "../lib/constants";
 import { ArrowLeft, Truck, CreditCard, Check, Loader2 } from "lucide-react";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "");
+// Initialize Stripe only if public key is provided
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 // Stripe Payment Form Component
 const StripePaymentForm = ({ cart, onSuccess, email, shippingAddress }) => {
@@ -525,6 +527,19 @@ const Checkout = () => {
                 </label>
               </div>
 
+              {/* Stripe Key Missing Warning */}
+              {paymentProvider === "pp_stripe_stripe" && !stripePublicKey && (
+                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-yellow-800 text-sm">
+                    <strong>Stripe not configured:</strong> Please add your Stripe public key to the <code className="bg-yellow-100 px-1 rounded">.env</code> file:
+                    <br />
+                    <code className="text-xs bg-yellow-100 px-2 py-1 rounded mt-1 inline-block">
+                      VITE_STRIPE_PUBLIC_KEY=pk_test_your_key_here
+                    </code>
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-4 mt-6">
                 <button
                   onClick={() => setStep(1)}
@@ -534,7 +549,7 @@ const Checkout = () => {
                 </button>
                 <button
                   onClick={handlePaymentSubmit}
-                  disabled={isLoading}
+                  disabled={isLoading || (paymentProvider === "pp_stripe_stripe" && !stripePublicKey)}
                   className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
@@ -591,7 +606,7 @@ const Checkout = () => {
               </div>
 
               {/* Stripe Card Input */}
-              {isStripeLike(paymentProvider) && (
+              {isStripeLike(paymentProvider) && stripePromise && (
                 <Elements stripe={stripePromise}>
                   <StripePaymentForm
                     cart={cart}
@@ -600,6 +615,15 @@ const Checkout = () => {
                     onSuccess={completeOrder}
                   />
                 </Elements>
+              )}
+
+              {/* Stripe Not Configured Error */}
+              {isStripeLike(paymentProvider) && !stripePromise && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-800 text-sm">
+                    <strong>Payment Error:</strong> Stripe is not properly configured. Please go back and select Manual Payment, or configure Stripe in your environment variables.
+                  </p>
+                </div>
               )}
 
               {/* Manual Payment Place Order */}

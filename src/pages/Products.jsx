@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import medusa from "../lib/medusa";
 import ProductCard from "../components/ProductCard";
-import { Search } from "lucide-react";
+import { Search, AlertCircle, RefreshCw } from "lucide-react";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -13,6 +14,8 @@ const Products = () => {
   }, []);
 
   const fetchProducts = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
       const { products } = await medusa.products.list({
         limit: 100,
@@ -20,6 +23,11 @@ const Products = () => {
       setProducts(products);
     } catch (err) {
       console.error("Failed to fetch products:", err);
+      if (err.message?.includes("ECONNREFUSED") || err.message?.includes("Network Error")) {
+        setError("Unable to connect to the backend server. Please make sure your Medusa backend is running on port 9000.");
+      } else {
+        setError("Failed to load products. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -46,6 +54,26 @@ const Products = () => {
         </div>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-red-800 font-semibold mb-1">Connection Error</h3>
+              <p className="text-red-700 mb-4">{error}</p>
+              <button
+                onClick={fetchProducts}
+                className="inline-flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Retry Connection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(8)].map((_, i) => (
@@ -67,7 +95,9 @@ const Products = () => {
           <p className="text-gray-500 text-lg">
             {searchQuery
               ? "No products found matching your search"
-              : "No products available"}
+              : error 
+                ? null 
+                : "No products available"}
           </p>
         </div>
       )}
